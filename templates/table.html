@@ -1,0 +1,20 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Todo</th>
+      <th scope="col">Email</th>
+      <th scope="col">Priority</th>
+      <th scope="col">Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for todo in todos %}
+    <tr>
+      <td>{{ todo.text }}</td>
+      <td>{{ todo.email }}</td>
+      <td>{{ todo.priority }}</td>
+      <td><button type="submit" class="btn btn-warning"><a href="/delete/{{ todo.id }}">Delete</a></button></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
