@@ -3,15 +3,14 @@
 {% block head %} {% endblock %}
 
 {% block display_todo %}
-<div class="container jumbotron todo-container">
-    <h2 class="container">Todo List</h2>
-    {% with todos=todos %}
-        {% include 'table.html' %}
-    {% endwith %}
-    <button type="submit" class="btn btn-warning"><a href="/clear">Clear</a></button>
-</div>
 <div class="container jumbotron">
-    <h2 class="container">Add Todo</h2>
-    {% include 'addTodo.html' %}
+    <h2 class="container">Login</h2>
+    {% include 'login.html' %}
 </div>
+
 {% endblock %}
+
+<!--{% for user in users %}-->
+<!--    <li>{{ user.email }}</li>-->
+<!--<li>{{ user.password }}</li>-->
+<!--{% endfor %}-->

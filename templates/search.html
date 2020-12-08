@@ -1,0 +1,14 @@
+<form action="/search_book/" method="GET">
+    <div class="form-group">
+    <input required type="isbn" name="isbn" class="form-control" id="isbn-search" placeholder="search by ISBN #">
+  </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{{ books }}
+{% for book in books.items %}
+<div>
+    <li>{{ book }}</li>
+</div>
+
+{% endfor %}
