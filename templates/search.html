@@ -1,14 +1,50 @@
-<form action="/search_book/" method="GET">
-    <div class="form-group">
-    <input required type="isbn" name="isbn" class="form-control" id="isbn-search" placeholder="search by ISBN #">
-  </div>
-    <button type="submit" class="btn btn-primary">Search</button>
-</form>
+{% extends "base.html" %}
+{% block search_page %}
+<div class="container jumbotron">
+    <div>
+        <form action="/search_book/" method="GET">
+            <div class="form-group">
+                <input required type="isbn" name="isbn" class="form-control" id="isbn-search" placeholder="search by ISBN # (10 digit only)">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
 
-{{ books }}
-{% for book in books.items %}
-<div>
-    <li>{{ book }}</li>
+    <div class="container jumbotron">
+        <p><a href="#" class="text-info">{{ count }} result found</a></p>
+        <p><a href="#" class="text-danger">{{ error }}</a></p>
+        {% for book in books %}
+            <form method="POST" action="/save?id={{book.id}}&isbn={{isbn}}">
+                    <div class="card mb-3" style="max-width: 540px;">
+                          <div class="row no-gutters">
+                              {% if book.volumeInfo.imageLinks.smallThumbnail %}
+                                <div class="col-md-4">
+                                  <img name="thumbnail" src="{{ book.volumeInfo.imageLinks.smallThumbnail }}" class="card-img" alt="" />
+                                </div>
+                              {% endif %}
+                                <div class="col-md-8">
+                                  <div class="card-body">
+                                    <h5 class="card-title">Title: {{ book.volumeInfo.title }}</h5>
+                                      {% if book.volumeInfo.authors %}
+                                            <p class="card-text">Authors:</p>
+                                            {% for author in book.volumeInfo.authors %}
+                                                <p class="card-text">{{ author }}</p>
+                                            {% endfor %}
+                                      {% endif %}
+                                      {% if book.volumeInfo.pageCount %}
+                                            <p class="card-text">Page count: {{ book.volumeInfo.pageCount }} pages</p>
+                                      {% endif %}
+                                      {% if book.volumeInfo.averageRating %}
+                                            <p class="card-text">Rating: {{ book.volumeInfo.averageRating }}</p>
+                                      {% endif %}
+                                        <button type="submit" class="btn btn-success">Save</button>
+                                  </div>
+                                </div>
+                          </div>
+                    </div>
+            </form>
+        {% endfor %}
+    </div>
 </div>
 
-{% endfor %}
+{% endblock %}

@@ -2,9 +2,12 @@ from flask import Flask, render_template, url_for, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import requests
+import json
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///book.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
 
 
@@ -12,9 +15,11 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(), nullable=False)
     author = db.Column(db.String(), nullable=False)
-    thumbnail = db.Column(db.String(), nullable=False)
+    thumbnail = db.Column(db.String(), nullable=True)
     page_count = db.Column(db.Integer, nullable=False)
-    avg_rating = db.Column(db.Float, nullable=False)
+    avg_rating = db.Column(db.Float, nullable=True)
+    book_id = db.Column(db.Integer, nullable=False, unique=True)
+    owner = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -31,6 +36,44 @@ class User(db.Model):
         return '<User %r>' % self.id
 
 
+@app.route('/save', methods=['POST'])
+def save_book():
+    id = request.args.get('id')
+    data = ''
+    save_error = 'Error saving data!'
+    save_success = 'Added successfully!'
+    if id:
+        isbn = request.args.get('isbn')
+        url = 'https://www.googleapis.com/books/v1/volumes?q=isbn:{}'.format(isbn)
+        try:
+            response = requests.get(url)
+            data = json.loads(response.text)
+        except:
+            return render_template('search.html', error=save_error)
+    found_book = ''
+    if data['items']:
+        for book in data['items']:
+            if book['id'] == id:
+                found_book = book
+
+    title = found_book['volumeInfo']['title']
+    author = found_book['volumeInfo']['authors'][0]
+    thumbnail = found_book['volumeInfo']['imageLinks']['smallThumbnail']
+    page_count = found_book['volumeInfo']['pageCount']
+    avg_rating = 0
+    if 'averageRating' in found_book['volumeInfo']:
+        avg_rating = found_book['volumeInfo']['averageRating']
+    book_id = id
+    new_book = Book(title=title, author=author, thumbnail=thumbnail, page_count=page_count, avg_rating=avg_rating,
+                    book_id=book_id)
+    try:
+        db.session.add(new_book)
+        db.session.commit()
+        return render_template('booklists.html', success=save_success)
+    except:
+        return render_template('search.html', error=save_error)
+
+
 @app.route('/', methods=['GET'])
 def display_todo_list():
     users = User.query.all()
@@ -38,8 +81,13 @@ def display_todo_list():
 
 
 @app.route('/search', methods=['GET'])
-def index():
+def search_page():
     return render_template('search.html')
+
+
+@app.route('/register', methods=['GET'])
+def register_page():
+    return render_template('register.html')
 
 
 @app.route('/post_user', methods=['POST'])
@@ -50,7 +98,7 @@ def post_user():
     try:
         db.session.add(new_todo)
         db.session.commit()
-        return redirect('/')
+        return redirect('/search')
     except:
         return redirect('/')
 
@@ -63,7 +111,9 @@ def login_user():
     user = User.query.filter_by(email=email).first()
     try:
         if user and user.password == password:
-            return render_template('/booklists.html')
+            res = Flask.make_response()
+            res.set_cookie("owner", value=user['id'])
+            return render_template('booklists.html')
         else:
             login_message = "Incorrect Login Credentials!"
     except:
@@ -72,14 +122,16 @@ def login_user():
 
 @app.route('/search_book/')
 def search_book():
-    search_message = ''
+    search_message = 'Error getting data!'
     isbn = request.args.get('isbn')
     url = 'https://www.googleapis.com/books/v1/volumes?q=isbn:{}'.format(isbn)
     try:
         response = requests.get(url)
-        return render_template('search.html', books=response.json())
+        data = json.loads(response.text)
+        count = data['totalItems']
+        return render_template('search.html', isbn=isbn, count=count, books=data['items'])
     except:
-        return render_template('search.html')
+        return render_template('search.html', error=search_message)
 
 
 #
@@ -110,4 +162,4 @@ def search_book():
 
 if __name__ == '__main__':
     db.create_all()
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=True)
