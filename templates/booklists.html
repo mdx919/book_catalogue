@@ -1,2 +1,36 @@
 {% extends "base.html" %}
-<button type="submit" class="btn btn-primary"><a href="/search">Search New book</a></button>
+{% block display_profile %}
+<div class="container jumbotron">
+    <div class="p-3 mb-2 bg-light text-dark" style="margin-top: 100px;"><a href="/search">Search New book</a></div>
+
+        {% for book in books %}
+            <form method="POST" action="">
+                    <div class="card mb-3" style="max-width: 540px;">
+                          <div class="row no-gutters">
+                              {% if book.thumbnail %}
+                                <div class="col-md-4">
+                                  <img name="thumbnail" src="{{ book.thumbnail }}" class="card-img" alt="" />
+                                </div>
+                              {% endif %}
+                                <div class="col-md-8">
+                                  <div class="card-body">
+                                    <h5 class="card-title">Title: {{ book.title }}</h5>
+                                      {% if book.author %}
+                                            <p class="card-text">Authors:</p>
+                                                <p class="card-text">{{ book.author }}</p>
+                                      {% endif %}
+                                      {% if book.page_count %}
+                                            <p class="card-text">Page count: {{ book.page_count }} pages</p>
+                                      {% endif %}
+                                      {% if book.avg_rating %}
+                                            <p class="card-text">Rating: {{ book.avg_rating }}</p>
+                                      {% endif %}
+                                        <button type="submit" class="btn btn-light"><a href="/delete/{{ book.id }}">Delete</a></button>
+                                  </div>
+                                </div>
+                          </div>
+                    </div>
+            </form>
+        {% endfor %}
+    </div>
+{% endblock %}

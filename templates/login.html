@@ -1,4 +1,8 @@
-<form action="/login_user/" method="GET">
+{% extends "base.html" %}
+{% block login_display %}
+<div class="container jumbotron">
+    <h2 class="container">Login</h2>
+    <form action="/login_user/" method="GET">
     <div class="form-group">
     <input required type="email" name="email" class="form-control" id="login-email" placeholder="name@example.com">
   </div>
@@ -7,5 +11,9 @@
   </div>
     <button type="submit" class="btn btn-primary">Login</button>
 </form>
+<p class="text-danger">{{ error }}</p>
 
 <p>Dont have Account?<a href="/register">Sign Up</a></p>
+</div>
+
+{% endblock %}

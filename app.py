@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, request, redirect
+from flask import Flask, render_template, url_for, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import requests
@@ -9,7 +9,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///book.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,7 +39,6 @@ class User(db.Model):
 @app.route('/save', methods=['POST'])
 def save_book():
     id = request.args.get('id')
-    data = ''
     save_error = 'Error saving data!'
     save_success = 'Added successfully!'
     if id:
@@ -48,30 +47,33 @@ def save_book():
         try:
             response = requests.get(url)
             data = json.loads(response.text)
+            found_book = ''
+            if data['items']:
+                for book in data['items']:
+                    if book['id'] == id:
+                        found_book = book
+            if found_book:
+                title = found_book['volumeInfo']['title']
+                author = found_book['volumeInfo']['authors'][0]
+                thumbnail = found_book['volumeInfo']['imageLinks']['smallThumbnail']
+                page_count = found_book['volumeInfo']['pageCount']
+                avg_rating = 0
+                if 'averageRating' in found_book['volumeInfo']:
+                    avg_rating = found_book['volumeInfo']['averageRating']
+                book_id = id
+                if 'userId' in session:
+                    new_book = Book(title=title, author=author, thumbnail=thumbnail, page_count=page_count,
+                                avg_rating=avg_rating,
+                                book_id=book_id, owner=session['userId'])
+                    try:
+                        db.session.add(new_book)
+                        db.session.commit()
+                        books = Book.query.filter(Book.owner == session['userId'])
+                        return render_template('booklists.html', success=save_success, books=books)
+                    except:
+                        return render_template('search.html', error=save_error)
         except:
             return render_template('search.html', error=save_error)
-    found_book = ''
-    if data['items']:
-        for book in data['items']:
-            if book['id'] == id:
-                found_book = book
-
-    title = found_book['volumeInfo']['title']
-    author = found_book['volumeInfo']['authors'][0]
-    thumbnail = found_book['volumeInfo']['imageLinks']['smallThumbnail']
-    page_count = found_book['volumeInfo']['pageCount']
-    avg_rating = 0
-    if 'averageRating' in found_book['volumeInfo']:
-        avg_rating = found_book['volumeInfo']['averageRating']
-    book_id = id
-    new_book = Book(title=title, author=author, thumbnail=thumbnail, page_count=page_count, avg_rating=avg_rating,
-                    book_id=book_id)
-    try:
-        db.session.add(new_book)
-        db.session.commit()
-        return render_template('booklists.html', success=save_success)
-    except:
-        return render_template('search.html', error=save_error)
 
 
 @app.route('/', methods=['GET'])
@@ -98,26 +100,24 @@ def post_user():
     try:
         db.session.add(new_todo)
         db.session.commit()
-        return redirect('/search')
+        return render_template('booklists.html')
     except:
-        return redirect('/')
+        msg = "Error creating user! Try Again!"
+        return render_template('booklists.html', error=msg)
 
 
 @app.route('/login_user/')
 def login_user():
-    login_message = ''
+    login_message = 'Error in Login in!'
     email = request.args.get('email')
     password = request.args.get('password')
     user = User.query.filter_by(email=email).first()
-    try:
-        if user and user.password == password:
-            res = Flask.make_response()
-            res.set_cookie("owner", value=user['id'])
-            return render_template('booklists.html')
-        else:
-            login_message = "Incorrect Login Credentials!"
-    except:
-        return render_template('login.html', login_message=login_message)
+    if user and user.password == password:
+        session['userId'] = user.id
+        books = Book.query.filter(Book.owner == session['userId'])
+        return render_template('booklists.html', books=books)
+    else:
+        return render_template('login.html', error=login_message)
 
 
 @app.route('/search_book/')
@@ -134,17 +134,20 @@ def search_book():
         return render_template('search.html', error=search_message)
 
 
-#
-# @app.route('/delete/<int:id>')
-# def delete(id):
-#     todo_to_delete = Todo.query.get_or_404(id)
-#
-#     try:
-#         db.session.delete(todo_to_delete)
-#         db.session.commit()
-#         return redirect('/')
-#     except:
-#         return redirect('/')
+
+@app.route('/delete/<int:id>')
+def delete(id):
+    print(id)
+    book_to_delete = Book.query.get_or_404(id)
+
+    try:
+        db.session.delete(book_to_delete)
+        db.session.commit()
+        books = Book.query.filter(Book.owner == session['userId'])
+        return render_template('booklists.html', books=books)
+    except:
+        books = Book.query.filter(Book.owner == session['userId'])
+        return render_template('booklists.html', books=books)
 #
 #
 # @app.route('/clear')
@@ -161,5 +164,5 @@ def search_book():
 #
 
 if __name__ == '__main__':
-    db.create_all()
     app.run(debug=True, use_reloader=True)
+    db.create_all()
